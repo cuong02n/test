@@ -1,9 +1,9 @@
 import Profile from "./Profile/Profile";
 
-export default function TabSubmissions({ data, problemsSolved }) {
+export default function TabSubmissions({ username }) {
   return (
     <div className={""}>
-      <Profile data={data} problemsSolved={problemsSolved} />
+      <Profile username={username} />
     </div>
   );
 }

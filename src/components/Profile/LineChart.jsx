@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import timestamp from "unix-timestamp";
+import { GET_RATING_GRAPH, USER_STATUS } from "../../utils/api";
 import { ratingColor } from "../../utils/ratingColor";
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -46,59 +47,146 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const Example = ({ data, problemsSolved }) => {
+const Example = ({ username }) => {
   const [graphData, setGraphData] = useState([]);
+  const [data, setData] = useState([]);
+  const [problemsSolved, setProblemsSolved] = useState([]);
 
-  if (data.length === 0)
-    throw new Error(
-      "No contest data to show here.\n User probably has not participated in any contests yet.",
-    );
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch(GET_RATING_GRAPH(username));
 
-  // reverse array
-  const reversedSubmissions = [...problemsSolved].reverse();
-  const updatedData = data.map((entry) => ({ ...entry })); // Create a shallow copy of each object in data
-  // console.log(reversedSubmissions);
+        console.log(res);
 
-  // const counts = { total: 0, names: []};
-  const counts = { total: 0 };
-  let it = 0;
-  for (let i = 0; i <= reversedSubmissions.length; i++) {
-    if (
-      reversedSubmissions[i]?.creationTimeSeconds <
-      updatedData[it].ratingUpdateTimeSeconds
-    ) {
-      counts[reversedSubmissions[i].rating] = counts[
-        reversedSubmissions[i].rating
-      ]
-        ? counts[reversedSubmissions[i].rating] + 1
-        : 1;
-      counts.total += 1;
+        if (res.status === 400) {
+          throw new Error("User not found");
+        } else if (res.status === 403) {
+          throw new Error("Too many requests");
+        } else if (res.status !== 200) {
+          throw new Error("Failed to fetch data");
+        }
 
-      // store all the names of the problems
-      // counts.names = [...counts.names, reversedSubmissions[i].problem];
-    } else {
-      updatedData[it].counts = { ...counts };
-      it++;
-      if (it >= updatedData.length) break;
-    }
-  }
+        if (res.headers.get("Content-Type").includes("text/html")) {
+          throw new Error(
+            "Network error or CodeForces API is down. Please try again later",
+          );
+        }
+
+        const data = await res.json();
+
+        setData(data.result);
+      } catch (error) {
+        if (error instanceof TypeError && error.message === "Failed to fetch") {
+          const str =
+            "Network error or CodeForces API is down. Please try again later.";
+
+          console.log(str);
+        } else {
+          console.log(error.message);
+        }
+      }
+    };
+
+    const fetchProblemsSolved = async () => {
+      try {
+        const res = await fetch(USER_STATUS(username));
+
+        if (res.status === 400) {
+          throw new Error("User not found");
+        } else if (res.status === 403) {
+          throw new Error("Too many requests");
+        } else if (res.status !== 200) {
+          throw new Error("Failed to fetch data");
+        }
+
+        const data = await res.json();
+
+        const newQuestionsSolved = [];
+
+        data.result.forEach((it) => {
+          const submission = {
+            id: it.id,
+            problem: it.problem.name,
+            contestId: it.contestId,
+            rating: it.problem.rating ? it.problem.rating : 0,
+            index: it.problem.index,
+            tags: it.problem.tags,
+            creationTimeSeconds: it.creationTimeSeconds,
+          };
+
+          if (it.verdict === "OK") {
+            if (
+              !newQuestionsSolved.some((x) => x.problem === it.problem.name)
+            ) {
+              newQuestionsSolved.push(submission);
+            }
+          }
+        });
+
+        setProblemsSolved(newQuestionsSolved);
+      } catch (error) {
+        if (error instanceof TypeError && error.message === "Failed to fetch") {
+          const str =
+            "Network error or CodeForces API is down. Please try again later.";
+          console.log(str);
+        } else {
+          console.log(error.message);
+        }
+      }
+    };
+
+    fetchData();
+    fetchProblemsSolved();
+  }, [username]);
 
   // updatedData[it].counts = { ...counts };
 
   // console.log(counts);
 
   useEffect(() => {
-    const formattedData = updatedData.map((entry) => ({
-      ...entry,
-      date: timestamp
-        .toDate(entry.ratingUpdateTimeSeconds)
-        .toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-        }),
-    }));
+    if (data.length !== 0) {
+      // reverse array
+      const reversedSubmissions = [...problemsSolved].reverse();
+      const updatedData = data.map((entry) => ({ ...entry })); // Create a shallow copy of each object in data
+      // console.log(reversedSubmissions);
 
-    setGraphData(formattedData);
+      // const counts = { total: 0, names: []};
+      const counts = { total: 0 };
+      let it = 0;
+      for (let i = 0; i <= reversedSubmissions.length; i++) {
+        if (
+          reversedSubmissions[i]?.creationTimeSeconds <
+          updatedData[it].ratingUpdateTimeSeconds
+        ) {
+          counts[reversedSubmissions[i].rating] = counts[
+            reversedSubmissions[i].rating
+          ]
+            ? counts[reversedSubmissions[i].rating] + 1
+            : 1;
+          counts.total += 1;
+
+          // store all the names of the problems
+          // counts.names = [...counts.names, reversedSubmissions[i].problem];
+        } else {
+          updatedData[it].counts = { ...counts };
+          it++;
+          if (it >= updatedData.length) break;
+        }
+      }
+
+      const formattedData = updatedData.map((entry) => ({
+        ...entry,
+        date: timestamp
+          .toDate(entry.ratingUpdateTimeSeconds)
+          .toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+          }),
+      }));
+
+      setGraphData(formattedData);
+    }
   }, [data, problemsSolved]);
 
   const [bottomStatDisplay, setBottomStatDisplay] = useState({});
@@ -107,7 +195,7 @@ const Example = ({ data, problemsSolved }) => {
     graphData.length > 10 ? Math.floor(graphData.length / 10) : 0;
   // const interval = 10;
 
-  let currentRating = data[data.length - 1].newRating;
+  let currentRating = data[data.length - 1]?.newRating;
   currentRating = Number(Math.max(...data.map((el) => el.newRating)));
 
   const originalRatingsYAxis = [

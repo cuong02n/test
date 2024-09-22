@@ -1,9 +1,9 @@
 import Example from "./LineChart";
 
-function Profile({ data, problemsSolved }) {
+function Profile({ username }) {
   return (
     <div className="h-96 w-[100%]">
-      <Example data={data} problemsSolved={problemsSolved} />
+      <Example username={username} />
     </div>
   );
 }
