@@ -7,7 +7,7 @@ import ErrorPage from "./ErrorPage";
 import TabSubmissions from "../components/TabSubmissions";
 import { getRatings } from "../context/solutions/solutionsSlice";
 
-export default function User() {
+export default function User({username}) {
   const x = useParams();
   const [styleBlur, setStyleBlur] = useState(true);
 
