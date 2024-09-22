@@ -1,15 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
+import { useEffect, useState } from "react";
 import {
-  LineChart,
+  CartesianGrid,
+  Legend,
   Line,
+  LineChart,
+  ReferenceArea,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceArea,
 } from "recharts";
 import timestamp from "unix-timestamp";
 import { ratingColor } from "../../utils/ratingColor";
@@ -47,11 +46,8 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const Example = () => {
+const Example = ({ data, problemsSolved }) => {
   const [graphData, setGraphData] = useState([]);
-
-  const data = useSelector((store) => store.user.ratingGraph);
-  const problemsSolved = useSelector((store) => store.user.problemsSolved);
 
   if (data.length === 0)
     throw new Error(
@@ -135,12 +131,6 @@ const Example = () => {
         <LineChart
           width={500}
           height={300}
-          onMouseDown={(e) => {
-            // console.log(e);
-
-            setBottomStatDisplay(e.activePayload[0].payload);
-          }}
-          // data={data}
           data={graphData}
           margin={{
             top: 5,

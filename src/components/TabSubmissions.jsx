@@ -1,16 +1,9 @@
-import { Box, Tabs, Text } from "@radix-ui/themes";
-import TableSubmissions from "./TableSubmissions";
-import { useSelector } from "react-redux";
 import Profile from "./Profile/Profile";
 
-export default function TabSubmissions({ setStyleBlur }) {
-  const { problemsSolved, correctSubmissions, skippedSubmissions } =
-    useSelector((store) => store.user);
-  // setStyleBlur(false);
-
+export default function TabSubmissions({ data, problemsSolved }) {
   return (
     <div className={""}>
-      <Profile />
+      <Profile data={data} problemsSolved={problemsSolved} />
     </div>
   );
 }
